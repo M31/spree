@@ -26,7 +26,8 @@ class Order < ActiveRecord::Base
   before_create :create_user
   before_create :generate_order_number
 
-  validates_presence_of :email, :if => :require_email
+  # TODO: validate the format of the email as well (but we can't rely on authlogic anymore to help with validation)
+  validates :email, :presence => true, :format => /^([\w\.%\+\-]+)@([\w\-]+\.)+([\w]{2,})$/i, :if => :require_email
   validate :has_available_shipment
 
   #delegate :ip_address, :to => :checkout
@@ -79,7 +80,7 @@ class Order < ActiveRecord::Base
   end
 
   # order state machine (see http://github.com/pluginaweek/state_machine/tree/master for details)
-  state_machine :initial => 'cart', :use_transactions => false do
+  state_machine :initial => :cart, :use_transactions => false do
 
     event :next do
       transition :from => 'cart',     :to => 'address'
@@ -269,7 +270,7 @@ class Order < ActiveRecord::Base
 
   # Creates a new shipment (adjustment is created by shipment model)
   def create_shipment!
-    shipping_method.reload
+    shipping_method(true)
     if shipment.present?
       shipment.update_attributes(:shipping_method => shipping_method)
     else
@@ -419,10 +420,10 @@ class Order < ActiveRecord::Base
   #
   # The +payment_state+ value helps with reporting, etc. since it provides a quick and easy way to locate Orders needing attention.
   def update_payment_state
-    if payment_total < total
+    if round_money(payment_total) < round_money(total)
       self.payment_state = "balance_due"
       self.payment_state = "failed" if payments.present? and payments.last.state == "failed"
-    elsif payment_total > total
+    elsif round_money(payment_total) > round_money(total)
       self.payment_state = "credit_owed"
     else
       self.payment_state = "paid"
@@ -432,12 +433,16 @@ class Order < ActiveRecord::Base
       self.state_events.create({
         :previous_state => old_payment_state,
         :next_state     => self.payment_state,
-        :name           => "payment" ,
+        :name           => "payment",
         :user_id        =>  (User.respond_to?(:current) && User.current && User.current.id) || self.user_id
       })
     end
   end
 
+  def round_money(n)
+    (n*100).round / 100.0
+  end
+  
   # Updates the following Order total values:
   #
   # +payment_total+      The total value of all finalized Payments (NOTE: non-finalized Payments are excluded)

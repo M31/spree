@@ -27,11 +27,7 @@ class Admin::OrdersController < Admin::BaseController
       params[:search][:completed_at_less_than] = params[:search].delete(:created_at_less_than)
     end
 
-    @orders = Order.metasearch(params[:search]).paginate(
-                                   :include  => [:user, :shipments, :payments],
-                                   :per_page => Spree::Config[:orders_per_page],
-                                   :page     => params[:page])
-
+    @orders = Order.metasearch(params[:search]).includes([:user, :shipments, :payments]).page(params[:page]).per(Spree::Config[:orders_per_page])
     respond_with(@orders)
   end
 
@@ -55,11 +51,16 @@ class Admin::OrdersController < Admin::BaseController
     load_order
     if @order.update_attributes(params[:order]) && @order.line_items.present?
       unless @order.complete?
-      
         if params[:order].key?(:email)
           shipping_method = @order.available_shipping_methods(:front_end).first
           if shipping_method
             @order.shipping_method = shipping_method
+
+            if params[:guest_checkout] == 'false' && params[:user_id].present?
+              @order.user_id = params[:user_id]
+              @order.user true
+            end
+            @order.save
             @order.create_shipment!
             return_path = edit_admin_order_shipment_path(@order, @order.shipment)
           else
@@ -69,14 +70,14 @@ class Admin::OrdersController < Admin::BaseController
         else
           return_path = user_admin_order_path(@order)
         end
-        
+
       else
         return_path = admin_order_path(@order)
       end
     else
       @order.errors.add(:line_items, t('errors.messages.blank'))
     end
-    
+
     respond_with(@order) do |format|
       format.html do
         if return_path

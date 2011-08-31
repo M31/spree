@@ -1,5 +1,6 @@
 module SpreeCore
   class Engine < Rails::Engine
+    engine_name 'spree_core'
 
     config.autoload_paths += %W(#{config.root}/lib)
     # TODO - register state monitor observer?
@@ -7,6 +8,7 @@ module SpreeCore
 
     # TODO: Is there a better way to make sure something within 'self.activate' only runs once in development?
     def self.activate
+
 
       #register all payment methods (unless we're in middle of rake task since migrations cannot be run for this first time without this check)
       if File.basename( $0 ) != "rake"
@@ -62,7 +64,15 @@ module SpreeCore
     end
 
     # filter sensitive information during logging
-    #config.filter_parameters += [:password, :password_confirmation, :number]
+    initializer "spree.params.filter" do |app|
+      app.config.filter_parameters += [:password, :password_confirmation, :number]
+    end
+
+    # sets the manifests / assets to be precompiled
+    initializer "spree.assets.precompile" do |app|
+      app.config.assets.precompile += ['store/all.*', 'admin/all.*', 'admin/spree_dash.*', 'admin/orders/edit_form.js', '*.png', '*.jpg', '*.jpeg', '*.gif']
+    end
+
 
   end
 end

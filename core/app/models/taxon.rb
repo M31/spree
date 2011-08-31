@@ -9,9 +9,9 @@ class Taxon < ActiveRecord::Base
   has_attached_file :icon,
                 :styles => { :mini => '32x32>', :normal => '128x128>' },
                 :default_style => :mini,
-                :url => "/assets/taxons/:id/:style/:basename.:extension",
-                :path => ":rails_root/public/assets/taxons/:id/:style/:basename.:extension",
-                :default_url => "/images/default_taxon.png"
+                :url => "/spree/taxons/:id/:style/:basename.:extension",
+                :path => ":rails_root/public/spree/taxons/:id/:style/:basename.:extension",
+                :default_url => "/assets/default_taxon.png"
 
 
   include ::ProductFilters  # for detailed defs of filters

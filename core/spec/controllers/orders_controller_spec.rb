@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
 describe OrdersController do
 
@@ -7,7 +7,9 @@ describe OrdersController do
     Order.stub(:find).with(1).and_return(order)
     controller.stub :current_user => nil
     #ensure no respond_overrides are in effect
-    Spree::BaseController.spree_responders[:OrdersController].clear
+    if Spree::BaseController.spree_responders[:OrdersController].present?
+      Spree::BaseController.spree_responders[:OrdersController].clear
+    end
   end
 
   context "#populate" do

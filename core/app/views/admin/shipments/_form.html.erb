@@ -1,6 +1,6 @@
 <% unless @shipment.order.cart? %>
   <table class="index" style="width:100%;" data-hook="admin_shipment_form_inventory_units">
-    <tr>
+    <tr data-hook="shipments_header">
       <th width="130px"><%= t('include_in_shipment') %></th>
       <th><%= t('sku') %></th>
       <th><%= t('item_description') %></th>
@@ -9,7 +9,7 @@
     </tr>
 
     <% @shipment.order.inventory_units.each do |inventory_unit| %>
-      <tr>
+      <tr data-hook="shipments_row">
         <td style="text-align:center;">
           <%= check_box_tag "inventory_units[#{inventory_unit.id}]",
                             :true,
@@ -26,7 +26,7 @@
         <td>
           <% if inventory_unit.shipment == @shipment %>
             <%= t('included_in_this_shipment') %>
-          <% elsif !inventory_unit.shipment_id.nil? %>
+          <% elsif !inventory_unit.shipment.nil? %>
             <%= t('included_in_other_shipment') %> - <%= link_to inventory_unit.shipment.number, edit_admin_order_shipment_url(inventory_unit.order, inventory_unit.shipment) %>
           <% end %>
         </td>

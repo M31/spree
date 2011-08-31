@@ -1,12 +1,13 @@
 require 'spree_core/action_callbacks'
 class Admin::ResourceController < Admin::BaseController
   helper_method :new_object_url, :edit_object_url, :object_url, :collection_url
-  before_filter :load_resource
+  prepend_before_filter :load_resource
 
   respond_to :html
   respond_to :js, :except => [:show, :index]
 
   def new
+    invoke_callbacks(:new_action, :before)
     respond_with(@object) do |format|
       format.html { render :layout => !request.xhr? }
       format.js { render :layout => false }
@@ -24,9 +25,7 @@ class Admin::ResourceController < Admin::BaseController
     invoke_callbacks(:update, :before)
     if @object.update_attributes(params[object_name])
       invoke_callbacks(:update, :after)
-      resource_desc = I18n.t(object_name)
-      resource_desc += " \"#{@object.name}\"" if @object.respond_to?(:name)
-      flash[:notice] = I18n.t(:successfully_updated, :resource => resource_desc)
+      flash[:notice] = flash_message_for(@object, :successfully_updated)
       respond_with(@object) do |format|
         format.html { redirect_to location_after_save }
         format.js   { render :layout => false }
@@ -41,9 +40,7 @@ class Admin::ResourceController < Admin::BaseController
     invoke_callbacks(:create, :before)
     if @object.save
       invoke_callbacks(:create, :after)
-      resource_desc = I18n.t(object_name)
-      resource_desc += " \"#{@object.name}\"" if @object.respond_to?(:name)
-      flash[:notice] = I18n.t(:successfully_created, :resource => resource_desc)
+      flash[:notice] = flash_message_for(@object, :successfully_created)
       respond_with(@object) do |format|
         format.html { redirect_to location_after_save }
         format.js   { render :layout => false }
@@ -58,9 +55,7 @@ class Admin::ResourceController < Admin::BaseController
     invoke_callbacks(:destroy, :before)
     if @object.destroy
       invoke_callbacks(:destroy, :after)
-      resource_desc = I18n.t(object_name)
-      resource_desc += " \"#{@object.name}\"" if @object.respond_to?(:name)
-      flash[:notice] = I18n.t(:successfully_removed, :resource => resource_desc)
+      flash[:notice] = flash_message_for(@object, :successfully_removed)
       respond_with(@object) do |format|
         format.html { redirect_to collection_url }
         format.js   { render :partial => "/admin/shared/destroy" }
@@ -84,6 +79,11 @@ class Admin::ResourceController < Admin::BaseController
       @parent_data[:model_name] = model_name
       @parent_data[:model_class] = model_name.to_s.classify.constantize
       @parent_data[:find_by] = options[:find_by] || :id
+    end
+
+    def new_action
+      @callbacks ||= {}
+      @callbacks[:new_action] ||= Spree::ActionCallbacks.new
     end
 
     def create

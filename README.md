@@ -29,28 +29,20 @@ Start by adding the gem to your existing Rails 3.x application's Gemfile
 
 Update your bundle
 
-    bundle install
+    $ bundle install
 
-Then use the install generator to do the basic setup (add Spree to Gemfile, etc.)
+Then use the install generator to do the basic setup
 
-    rails g spree:site
+    $ rails g spree:site
 
-Now its time to install all of the necessary migrations, assets, etc.
+Now you just need to run the new migrations, and setup some basic data
 
-    rake spree:install
-
-If you'd like to also install sample data and images you can follow up the above command with:
-
-    rake spree_sample:install
-
-Now you just need to run the new migrations
-
-    rake db:migrate
-    rake db:seed
+    $ bundle exec rake db:migrate
+    $ bundle exec rake db:seed
 
 If you also want some sample products, orders, etc. to play with you can run the appropriate rake task.
 
-    rake db:sample
+    $ bundle exec rake spree_sample:load
 
 
 Browse Store
@@ -82,12 +74,27 @@ The source code is essentially a collection of gems.  Spree is meant to be run w
 
 3. Create a sandbox rails application for testing purposes (and automatically perform all necessary database setup)
 
-        rake sandbox
+        bundle exec rake sandbox
 
 6. Start the server
 
         cd sandbox
         rails server
+
+Performance
+-----------
+
+You may noticed that your Spree store runs slowly in development mode.  This is a side-effect of how Rails works in development mode which is to continuous reload your Ruby objects on each request.  The introduction of the asset pipeline in Rails 3.1 made default performance in development mode significantly worse.  There are, however, a few tricks to speeding up performance.
+
+You can recompile your assets as follows:
+
+        $ bundle exec rake assets:precompile RAILS_ENV=development
+
+If you want to remove precompiled assets (recommended before you commit to git and push your changes) use the following rake task:
+
+        $ bundle exec rake assets:clean
+
+
 
 Running Tests
 -------------
@@ -95,36 +102,39 @@ Running Tests
 If you want to run all the tests across all the gems then
 
     $ cd spree
-    $ rake spec     #=> 'this will run spec tests for all the gems'
-    $ rake cucumber #=> 'this will run cucumber tests for all the gems'
-    $ rake          #=> 'this will run both spec and cucumber tests for all the gems'
+    $ bundle exec rake          #=> 'this will run both spec and cucumber tests for all the gems'
 
 Each gem contains its own series of tests, and for each directory, you need to do a quick one-time
 creation of a test application and then you can use it to run the tests.  For example, to run the
 tests for the core project.
 
     $ cd core
-    $ rake test_app
-    $ rake spec
-    $ rake cucumber
-    $ rake          #=> 'this will run both spec and cucumber tests for the gem'
+    $ bundle exec rake test_app
 
-    # If you want to run specs for only a single spec file
+Now you can run just the specs, just the features or everything together
+
+    $ bundle exec rake spec
+    $ bundle exec rake cucumber
+    $ bundle exec rake          #=> 'this will run both spec and cucumber tests for the gem'
+
+If you want to run specs for only a single spec file
+
     $ bundle exec rspec spec/models/state_spec.rb
 
-    # If you want to run a particular line of spec
+If you want to run a particular line of spec
+
     $ bundle exec rspec spec/models/state_spec.rb:7
 
-    # If you want to run a single cucumber feature
-    # bundle exec cucumber features/admin/orders.feature --require features
+If you want to run a single cucumber feature
 
-    # If you want to run a particular scenario then include the line number
-    # bundle exec cucumber features/admin/orders.feature:3 --require features
+    $ bundle exec cucumber features/admin/orders.feature --require features
+
+If you want to run a particular scenario then include the line number
+
+    $ bundle exec cucumber features/admin/orders.feature:3 --require features
 
 
 Contributing
 ------------
 
 Spree is an open source project.  We encourage contributions.  Please see the [contributors guidelines](http://spreecommerce.com/documentation/contributing_to_spree.html) before contributing.
-
-The Github team has also been kind enough to write up some great [documentation](http://help.github.com/pull-requests/) on working with pull requests. Contributions should be performed on [topic branches](http://progit.org/book/ch3-4.html) in your personal forks - just issue your pull requests from there. We're also asking that you continue to log important issues for non-trivial patches in our [lighthouse repository](http://railsdog.lighthouseapp.com/projects/31096-spree). You can just link the pull request in the ticket (and link the ticket in the pull request.)

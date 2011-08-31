@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
 describe Promotion do
   let(:promotion) { Promotion.new }
@@ -22,6 +22,12 @@ describe Promotion do
       @action1 = mock_model(PromotionAction, :perform => true)
       @action2 = mock_model(PromotionAction, :perform => true)
       promotion.promotion_actions = [@action1, @action2]
+    end
+
+    context "when checking coupon_is_eligible?" do
+      it "should accommodate promotions that are not attached to orders" do
+        lambda {promotion.activate(:order => nil, :user => nil)}.should_not raise_error
+      end
     end
 
     context "when eligible?" do

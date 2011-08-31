@@ -1,6 +1,6 @@
 ENV["RAILS_ENV"] ||= "cucumber"
 
-require File.expand_path("../spec/test_app/config/environment", FEATURES_PATH)
+require File.expand_path("../spec/dummy/config/environment", FEATURES_PATH)
 
 # sometimes tests fail randomly because cache is not refreshed, fixed that
 Spree::Config.set(:foo => "bar")
@@ -39,7 +39,6 @@ Capybara.save_and_open_page_path = File.join(Rails.root, "tmp")
 
 # load the rest of files for support and step definitions
 directories = [ File.join(FEATURES_PATH, '../../features/support'),
-                File.join(FEATURES_PATH, '../../core/features/step_definitions'),
                 File.join(FEATURES_PATH, '../../features/step_definitions') ]
 
 files = directories.map do |dir|

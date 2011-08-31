@@ -26,19 +26,20 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #--
-require "rails/all"
+require 'rails/all'
 
 require 'state_machine'
 require 'paperclip'
 require 'stringex'
-require 'will_paginate'
+require 'kaminari'
 #require 'less' #TODO RAILS3: consider making this optional
 require 'nested_set'
 require 'acts_as_list'
 require 'resource_controller'
 require 'active_merchant'
-require "meta_search"
-require "find_by_param"
+require 'meta_search'
+require 'find_by_param'
+require 'jquery-rails'
 
 require 'spree_core/ext/active_record'
 require 'spree_core/ext/hash'
@@ -76,6 +77,9 @@ end
 require 'spree_core/version'
 
 require 'spree_core/railtie'
+require 'generators/spree_core/site/site_generator'
+require 'generators/spree_core/dummy/dummy_generator'
+require 'generators/spree_core/sandbox/sandbox_generator'
 
 ActiveRecord::Base.class_eval do
   include Spree::CalculatedAdjustments

@@ -15,7 +15,7 @@ module Admin::NavigationHelper
     destination_url = send("#{options[:route]}_path")
 
     ## if more than one form, it'll capitalize all words
-    label_with_first_letters_capitalized = t(options[:label]).gsub(/\b\w/){$&.upcase}
+    label_with_first_letters_capitalized = t(options[:label], :default => options[:label]).gsub(/\b\w/){$&.upcase}
 
     link = link_to(label_with_first_letters_capitalized, destination_url)
 
@@ -98,7 +98,7 @@ module Admin::NavigationHelper
   end
 
   def icon(icon_name)
-    icon_name ? image_tag("/admin/images/icons/#{icon_name}.png") : ''
+    icon_name ? image_tag("admin/icons/#{icon_name}.png") : ''
   end
 
   def button(text, icon_name = nil, button_type = 'submit', options={})

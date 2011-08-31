@@ -38,6 +38,7 @@ class Product < ActiveRecord::Base
   after_create :set_master_variant_defaults
   after_create :add_properties_and_option_types_from_prototype
   before_save :recalculate_count_on_hand
+  before_update :sanitize_permalink
   after_save :update_memberships if ProductGroup.table_exists?
   after_save :set_master_on_hand_to_zero_when_product_has_variants
   after_save :save_master
@@ -56,6 +57,11 @@ class Product < ActiveRecord::Base
     :class_name => 'Variant',
     :conditions => ["variants.deleted_at IS NULL AND variants.is_master = ?", true],
     :dependent => :destroy
+
+
+  def variant_images
+    Image.find_by_sql("SELECT assets.* FROM assets LEFT JOIN variants ON (variants.id = assets.viewable_id) WHERE (variants.product_id = #{self.id})")
+  end
 
 
   validates :name, :price, :permalink, :presence => true
@@ -197,7 +203,7 @@ class Product < ActiveRecord::Base
     else
     end
     # allow site to do some customization
-    p.send(:duplicate_extra) if p.respond_to?(:duplicate_extra)
+    p.send(:duplicate_extra, self) if p.respond_to?(:duplicate_extra)
     p.save!
     p
   end
@@ -222,6 +228,10 @@ class Product < ActiveRecord::Base
   end
 
   private
+  
+  def sanitize_permalink
+    self.permalink = self.permalink.to_url
+  end
 
   def recalculate_count_on_hand
     product_count_on_hand = has_variants? ?

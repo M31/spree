@@ -5,7 +5,7 @@ module CheckoutHelper
       %w(address delivery payment confirm complete)
     else
       %w(address delivery payment complete)
-    end  
+    end
   end
 
   def checkout_progress

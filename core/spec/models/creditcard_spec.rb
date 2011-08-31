@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
 describe Creditcard do
 
@@ -7,13 +7,12 @@ describe Creditcard do
   end
 
   let(:valid_creditcard_attributes) { {:number => '4111111111111111', :verification_value => '123', :month => 12, :year => 2014} }
-  let(:order) { mock_model(Order, :update! => nil, :payments => []) }
 
   before(:each) do
-    order.stub_chain(:payments, :reload => [])
 
+    @order = Factory(:order)
     @creditcard = Creditcard.new
-    @payment = Payment.create(:amount => 100, :order => order)
+    @payment = Payment.create(:amount => 100, :order => @order)
 
     @success_response = mock('gateway_response', :success? => true, :authorization => '123', :avs_result => {'code' => 'avs-code'})
     @fail_response = mock('gateway_response', :success? => false)
@@ -29,9 +28,6 @@ describe Creditcard do
     )
 
     @payment.stub :payment_method => @payment_gateway
-
-    @creditcard.stub!(:gateway_options).and_return({})
-    @creditcard.stub!(:minimal_gateway_options).and_return({})
   end
 
   context "#process!" do
@@ -49,9 +45,11 @@ describe Creditcard do
 
   context "#authorize" do
     it "should call authorize on the gateway with the payment amount" do
-      @payment_gateway.should_receive(:authorize).with(10000, @creditcard, {})
+      @payment_gateway.should_receive(:authorize).with(10000, @creditcard, anything)
       @creditcard.authorize(100, @payment)
     end
+
+
 
     it "should log the response" do
       @payment.log_entries.should_receive(:create).with(:details => anything)
@@ -79,7 +77,7 @@ describe Creditcard do
     context "if unsucessfull" do
       it "should make payment failed" do
         @payment_gateway.stub(:authorize).and_return(@fail_response)
-        @payment.should_receive(:fail)
+        @payment.should_receive(:failure)
         @payment.should_not_receive(:pend)
         lambda{
           @creditcard.authorize(100, @payment)
@@ -90,55 +88,73 @@ describe Creditcard do
 
   context "#purchase" do
     it "should call purchase on the gateway with the payment amount" do
-      @payment_gateway.should_receive(:purchase).with(10000, @creditcard, {})
-      @creditcard.purchase(100, @payment)
+     @payment_gateway.should_receive(:purchase).with(10000, @creditcard, anything)
+     @creditcard.purchase(100, @payment)
     end
     it "should log the response" do
-      @payment.log_entries.should_receive(:create).with(:details => anything)
-      @creditcard.purchase(100, @payment)
+     @payment.log_entries.should_receive(:create).with(:details => anything)
+     @creditcard.purchase(100, @payment)
     end
     context "when gateway does not match the environment" do
-      it "should raise an exception" do
-        @payment_gateway.stub :environment => "foo"
-        lambda {@creditcard.purchase(100, @payment)}.should raise_error(Spree::GatewayError)
-      end
+     it "should raise an exception" do
+       @payment_gateway.stub :environment => "foo"
+       lambda {@creditcard.purchase(100, @payment)}.should raise_error(Spree::GatewayError)
+     end
     end
     context "if sucessfull" do
-      before do
-        @payment_gateway.stub(:purchase).and_return(@success_response)
-      end
-      it "should store the response_code and avs_response" do
-        @creditcard.purchase(100, @payment)
-        @payment.response_code.should == '123'
-        @payment.avs_response.should == 'avs-code'
-      end
-      it "should make payment complete" do
-        @payment.should_receive(:complete)
-        @creditcard.purchase(100, @payment)
-      end
+     before do
+       @payment_gateway.stub(:purchase).and_return(@success_response)
+     end
+     it "should store the response_code and avs_response" do
+       @creditcard.purchase(100, @payment)
+       @payment.response_code.should == '123'
+       @payment.avs_response.should == 'avs-code'
+     end
+     it "should make payment complete" do
+       @payment.should_receive(:complete)
+       @creditcard.purchase(100, @payment)
+     end
     end
     context "if unsucessfull" do
-      it "should make payment failed" do
-        @payment_gateway.stub(:purchase).and_return(@fail_response)
-        @payment.should_receive(:fail)
-        @payment.should_not_receive(:pend)
-        lambda{
-          @creditcard.purchase(100, @payment)
-        }.should raise_error(Spree::GatewayError)
-      end
+     it "should make payment failed" do
+       @payment_gateway.stub(:purchase).and_return(@fail_response)
+       @payment.should_receive(:failure)
+       @payment.should_not_receive(:pend)
+       lambda{
+         @creditcard.purchase(100, @payment)
+       }.should raise_error(Spree::GatewayError)
+     end
     end
   end
 
   context "#capture" do
     before do
-      @payment.stub(:complete).and_return(true)
+     @payment.stub(:complete).and_return(true)
     end
     context "when payment is pending" do
       before do
         @payment.state = 'pending'
       end
       it "should call capture on the gateway with the self as the authorization" do
-        @payment_gateway.should_receive(:capture).with(@payment, @creditcard, {})
+        @payment_gateway.should_receive(:capture).with(@payment, @creditcard, anything)
+        @creditcard.capture(@payment)
+      end
+      it "should not pass subtotal" do
+        @order.stub :item_total => 90
+        @payment_gateway.should_not_receive(:capture).with(@payment, @creditcard,
+                                                           hash_including(:subtotal => 9000))
+        @creditcard.capture(@payment)
+      end
+      it "should not pass shipping" do
+        @order.stub :ship_total => 5
+        @payment_gateway.should_not_receive(:capture).with(@payment, @creditcard,
+                                                           hash_including(:shipping => 500))
+        @creditcard.capture(@payment)
+      end
+      it "should not pass tax" do
+        @order.stub :tax_total => 5
+        @payment_gateway.should_not_receive(:capture).with(@payment, @creditcard,
+                                                           hash_including(:tax=> 500))
         @creditcard.capture(@payment)
       end
       it "should log the response" do
@@ -146,30 +162,30 @@ describe Creditcard do
         @creditcard.capture(@payment)
       end
       context "when gateway does not match the environment" do
-        it "should raise an exception" do
-          @payment_gateway.stub :environment => "foo"
-          lambda {@creditcard.capture(@payment)}.should raise_error(Spree::GatewayError)
-        end
+       it "should raise an exception" do
+         @payment_gateway.stub :environment => "foo"
+         lambda {@creditcard.capture(@payment)}.should raise_error(Spree::GatewayError)
+       end
       end
       context "if sucessfull" do
-        it "should make payment complete" do
-          @payment.should_receive(:complete)
-          @creditcard.capture(@payment)
-        end
-        it "should store the response_code" do
-          @creditcard.capture(@payment)
-          @payment.response_code.should == '123'
-        end
+       it "should make payment complete" do
+         @payment.should_receive(:complete)
+         @creditcard.capture(@payment)
+       end
+       it "should store the response_code" do
+         @creditcard.capture(@payment)
+         @payment.response_code.should == '123'
+       end
       end
       context "if unsucessfull" do
-        it "should not make payment complete" do
-          @payment_gateway.stub(:capture).and_return(@fail_response)
-          @payment.should_receive(:fail)
-          @payment.should_not_receive(:complete)
-          lambda{
-            @creditcard.capture(@payment)
-          }.should raise_error(Spree::GatewayError)
-        end
+       it "should not make payment complete" do
+         @payment_gateway.stub(:capture).and_return(@fail_response)
+         @payment.should_receive(:failure)
+         @payment.should_not_receive(:complete)
+         lambda{
+           @creditcard.capture(@payment)
+         }.should raise_error(Spree::GatewayError)
+       end
       end
     end
     context "when payment is not pending" do
@@ -177,7 +193,7 @@ describe Creditcard do
         @payment.state = 'checkout'
       end
       it "should not call capture on the gateway" do
-        @payment_gateway.should_not_receive(:capture).with(@payment, @creditcard, {})
+        @payment_gateway.should_not_receive(:capture).with(@payment, @creditcard, anything)
         @creditcard.capture(@payment)
       end
     end
@@ -189,7 +205,22 @@ describe Creditcard do
       @payment.state = 'pending'
     end
     it "should call payment_gateway.void with the payment's response_code" do
-      @payment_gateway.should_receive(:void).with('123', {})
+      @payment_gateway.should_receive(:void).with('123', anything)
+      @creditcard.void(@payment)
+    end
+    it "should not pass subtotal" do
+      @order.stub :item_total => 90
+      @payment_gateway.should_not_receive(:void).with('123', hash_including(:subtotal => 9000))
+      @creditcard.void(@payment)
+    end
+    it "should not pass shipping" do
+      @order.stub :ship_total => 5
+      @payment_gateway.should_not_receive(:void).with('123', hash_including(:shipping => 500))
+      @creditcard.void(@payment)
+    end
+    it "should not pass tax" do
+      @order.stub :tax_total => 5
+      @payment_gateway.should_not_receive(:void).with('123', hash_including(:tax=> 500))
       @creditcard.void(@payment)
     end
     it "should log the response" do
@@ -228,36 +259,52 @@ describe Creditcard do
     before do
       @payment.state = 'complete'
       @payment.response_code = '123'
-      @payment.stub(:order).and_return(mock_model(Order, :outstanding_balance => 10))
+      @payment.stub(:order).and_return(@order)
     end
 
     context "when outstanding_balance is less than payment amount" do
+      before {  @order.stub :outstanding_balance => 10 }
 
       it "should call credit on the gateway with the credit amount and response_code" do
-        @payment_gateway.should_receive(:credit).with(1000, @creditcard, '123', {})
+        @payment_gateway.should_receive(:credit).with(1000, @creditcard, '123', anything)
         @creditcard.credit(@payment)
       end
-
+      it "should not pass subtotal" do
+        @order.stub :item_total => 90
+        @payment_gateway.should_not_receive(:credit).with(1000, @creditcard, '123',
+                                                          hash_including(:subtotal => 9000))
+        @creditcard.credit(@payment)
+      end
+      it "should not pass shipping" do
+        @order.stub :ship_total => 5
+        @payment_gateway.should_not_receive(:credit).with(1000, @creditcard, '123',
+                                                          hash_including(:shipping => 500))
+        @creditcard.credit(@payment)
+      end
+      it "should not pass tax" do
+        @order.stub :tax_total => 5
+        @payment_gateway.should_not_receive(:credit).with(1000, @creditcard, '123',
+                                                          hash_including(:tax => 500))
+        @creditcard.credit(@payment)
+      end
     end
 
     context "when outstanding_balance is equal to payment amount" do
-      before {  @payment.stub(:order).and_return(mock_model(Order, :outstanding_balance => 100)) }
+      before { @order.stub :outstanding_balance => 100 }
 
       it "should call credit on the gateway with the credit amount and response_code" do
-        @payment_gateway.should_receive(:credit).with(10000, @creditcard, '123', {})
+        @payment_gateway.should_receive(:credit).with(10000, @creditcard, '123', anything)
         @creditcard.credit(@payment)
       end
-
     end
 
     context "when outstanding_balance is greater than payment amount" do
-      before {  @payment.stub(:order).and_return(mock_model(Order, :outstanding_balance => 101)) }
+      before {  @order.stub :outstanding_balance => 101 }
 
       it "should call credit on the gateway with the original payment amount and response_code" do
-        @payment_gateway.should_receive(:credit).with(10000, @creditcard, '123', {})
+        @payment_gateway.should_receive(:credit).with(10000, @creditcard, '123', anything)
         @creditcard.credit(@payment)
       end
-
     end
 
     it "should log the response" do
@@ -279,6 +326,7 @@ describe Creditcard do
       end
       context "resulting payment" do
         before do
+          @order.stub :outstanding_balance => 10
           @offsetting_payment = @creditcard.credit(@payment)
         end
         it "should be the supplied amount" do

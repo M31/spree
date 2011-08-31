@@ -11,31 +11,33 @@
 
 <% else %>
   <div data-hook="outside_cart_form">
-    <%= form_for(@order, :url => update_cart_path, :html=>{:id=>'updatecart'}) do |order_form| %>
+    <%= form_for(@order, :url => update_cart_path, :html => {:id => 'update-cart'}) do |order_form| %>
       <div data-hook="inside_cart_form">
 
         <div data-hook="cart_items">
           <%= render :partial => 'form', :locals => {:order_form => order_form} %>
         </div>
 
-        <div id="subtotal">
+        <div id="subtotal" data-hook>
           <h3><%= "#{t("subtotal")}: #{order_price(@order)}" %></h3>
-          <div class="links">
-            <%= link_to image_tag('/images/update.png') + t("update"), '#', :class => 'button checkout primary', :onclick => "$('form#updatecart').submit(); return false;" %>
-            <%= link_to image_tag('/images/checkout.png') + t("checkout"), checkout_path, :class => 'button checkout primary' %>
+          <div class="links" data-hook="cart_buttons">
+            <button type="submit" class="large primary" id="update-button">
+              <%= image_tag('icons/update.png') + t('update') %>
+            </button>
+            <%= link_to image_tag('icons/checkout.png') + t("checkout"), checkout_path, :class => 'button checkout primary', :id => 'checkout-link' %>
           </div>
         </div>
-
-        <p><%=link_to t("continue_shopping"), products_path, :class => 'button continue' %></p>
 
       </div>
     <% end %>
   </div>
-
+  <div id="empty-cart" data-hook>
   <%= form_tag empty_cart_path, :method => :put do %>
-    <p id="clear_cart_link">
+    <p id="clear_cart_link" data-hook>
       <input type="submit" value="<%= t('empty_cart') %>" class="button" />
+      <%= t(:or) %>
+      <%=link_to t("continue_shopping"), products_path, :class => 'continue' %>
     </p>
   <% end %>
-
+  </div>
 <% end %>
