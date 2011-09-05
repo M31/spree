@@ -12,6 +12,10 @@ module SpreeCore
         [File.expand_path('../templates', __FILE__)]
       end
 
+			def load_tasks(app=nil)
+				STDERR.puts 'I am here!!!!!!!!!!!!!!!!!!!!!!!!!!!11'
+			end
+
       def remove_unneeded_files
         remove_file "public/index.html"
       end
